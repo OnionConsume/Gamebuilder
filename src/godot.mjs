@@ -1,12 +1,15 @@
-import { mkdir, writeFile, copyFile, access, rm } from 'node:fs/promises';
+// SPDX-License-Identifier: GPL-3.0-only
+import { mkdir, writeFile, copyFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { validatePlan } from './plan.mjs';
+import { inspectGlb } from './assets.mjs';
 
 export async function generateProject(input, output, { character } = {}) {
   const plan = validatePlan(input);
+  let manifest;
   if (character) {
     if (path.extname(character).toLowerCase() !== '.glb') throw new Error('Character must be a self-contained .glb file.');
-    await access(character);
+    manifest = await inspectGlb(character);
   }
   const root = path.resolve(output);
   // Exclusive directory creation prevents accidental replacement of an existing project.
@@ -15,6 +18,8 @@ export async function generateProject(input, output, { character } = {}) {
   try {
     await mkdir(path.join(root, 'assets'));
     if (character) await copyFile(character, path.join(root, 'assets', 'character.glb'));
+    if (manifest) await writeFile(path.join(root, 'asset-manifest.json'), JSON.stringify(manifest, null, 2));
+    await copyFile(new URL('../LICENSE', import.meta.url), path.join(root, 'LICENSE'));
     const config = `[application]\nconfig/name=${JSON.stringify(plan.title)}\nrun/main_scene="res://main.tscn"\n\n[display]\nwindow/size/viewport_width=1280\nwindow/size/viewport_height=720\n\n[rendering]\nrenderer/rendering_method="gl_compatibility"\n`;
     const scene = `[gd_scene load_steps=2 format=3]\n\n[ext_resource type="Script" path="res://game.gd" id="1"]\n\n[node name="Game" type="Node3D"]\nscript = ExtResource("1")\n`;
     await Promise.all([
@@ -33,7 +38,8 @@ export async function generateProject(input, output, { character } = {}) {
 
 function gameScript(p, hasCharacter) {
   const rgb = [1, 3, 5].map(i => parseInt(p.background.slice(i, i + 2), 16) / 255).join(', ');
-  return `extends Node3D
+  return `# SPDX-License-Identifier: GPL-3.0-only
+extends Node3D
 
 var collected := 0
 var crystals: Array[Node3D] = []
@@ -125,7 +131,8 @@ func update_status() -> void:
 }
 
 function playerScript(p) {
-  return `extends CharacterBody3D
+  return `# SPDX-License-Identifier: GPL-3.0-only
+extends CharacterBody3D
 
 var animator: AnimationPlayer
 var clips := {}

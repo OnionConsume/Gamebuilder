@@ -1,4 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import test from 'node:test';
+import { glbFixture } from './fixtures.mjs';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -42,10 +44,14 @@ test('copies supplied GLB and enables asset scene loading', async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'gamewright-'));
   try {
     const asset = path.join(temp, 'hero.glb');
-    await writeFile(asset, 'test fixture bytes');
+    const bytes = glbFixture();
+    await writeFile(asset, bytes);
     const out = path.join(temp, 'game');
     await generateProject(demoPlan, out, { character: asset });
-    assert.equal(await readFile(path.join(out, 'assets/character.glb'), 'utf8'), 'test fixture bytes');
+    assert.deepEqual(await readFile(path.join(out, 'assets/character.glb')), bytes);
+    const manifest = JSON.parse(await readFile(path.join(out, 'asset-manifest.json'), 'utf8'));
+    assert.equal(manifest.schemaVersion, 1);
+    assert.match(await readFile(path.join(out, 'LICENSE'), 'utf8'), /GNU GENERAL PUBLIC LICENSE/);
     assert.match(await readFile(path.join(out, 'game.gd'), 'utf8'), /character.glb/);
     await assert.rejects(generateProject(demoPlan, path.join(temp, 'bad'), { character: 'hero.fbx' }), /\.glb/);
   } finally { await rm(temp, { recursive: true, force: true }); }

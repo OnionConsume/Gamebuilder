@@ -2,6 +2,7 @@
   "name": "gamewright",
   "version": "0.1.0",
   "private": true,
+  "license": "GPL-3.0-only",
   "type": "module",
   "description": "AI-assisted Godot prototype generator for solo developers",
   "scripts": {

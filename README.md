@@ -37,6 +37,16 @@ Use a self-contained GLB with embedded textures and animations, in meters, with 
 
 Each output is a standalone project containing `project.godot`, the main scene, character/game scripts, copied assets, and `game-plan.json`. Existing output directories are never overwritten. Edit the generated scripts in Godot; generating again uses a new directory.
 
+### Inspect assets before generating
+
+```sh
+node src/cli.mjs --inspect "C:/Assets/knight.glb"
+```
+
+Reports the content SHA-256, mesh count, skins and joint counts, animation names, suggested action mappings, and available mesh-local bounds. Bounds come from accessor metadata and do not include node transforms or animated poses. This is metadata inspection, not full glTF conformance validation or a guarantee of Godot compatibility.
+
+Generation now checks GLB headers and chunk lengths and rejects external buffer/image dependencies before creating an output project. A supplied character produces `asset-manifest.json` in the output. Animation names in the report are suggestions; Godot may rename clips on import. No retargeting or automatic scaling is performed.
+
 ## Development
 
 ```sh
@@ -54,4 +64,8 @@ Tests cover plan validation, AI response handling, project generation, asset cop
 4. Iteration: update a validated plan and preview changes without losing hand-edited work.
 5. Verification: headless Godot import checks and controlled playtest sessions.
 
-See [architecture](docs/architecture.md) for the implementation boundary. No license has been selected yet.
+See [architecture](docs/architecture.md) for the implementation boundary.
+
+## License
+
+Gamewright is licensed under [GNU GPL version 3](LICENSE) (`GPL-3.0-only`). Generated projects include GPL-licensed runtime scripts from this repository and a copy of the license. Supplied models, textures, animations, and sounds retain their own licenses; they are not relicensed by importing them.

@@ -6,6 +6,8 @@ Gamewright helps one developer reach a playable first version while retaining an
 
 CLI prompt → local Ollama planner → strict plan validation → Godot templates → standalone project.
 
+`src/assets.mjs` inspects self-contained GLB metadata before generation. The exported asset manifest records a content hash, animations, skins, suggested mappings, and available local geometry bounds. It checks container structure and external dependencies; full binary/accessor validation and world-space geometry inspection remain future work.
+
 `src/plan.mjs` is the AI boundary. It accepts only bounded gameplay parameters and text, discards unknown fields, and never executes returned code. `src/godot.mjs` owns engine code and file layout. Generated projects have no runtime AI dependency. `src/cli.mjs` connects the two with explicit demo and AI modes.
 
 Only a collectible arena is currently supported. Prompts requesting other genres are adapted into that constraint; they do not implement those genres. The plan description records intent but does not add executable mechanics. Output uses fixed collision dimensions and a fixed camera.

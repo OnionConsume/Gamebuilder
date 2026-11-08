@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 export const demoPlan = {
   title: 'Crystal Garden',
   description: 'Explore a small arena and collect every crystal.',
