@@ -42,9 +42,11 @@ func _ready() -> void:
 		call_deferred("bake_map")
 	elif "--physics-test" in OS.get_cmdline_user_args():
 		call_deferred("physics_test")
+	elif "--animation-test" in OS.get_cmdline_user_args():
+		call_deferred("animation_test")
 
 func setup_input() -> void:
-	var keys := {"left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT], "forward": [KEY_W, KEY_UP], "back": [KEY_S, KEY_DOWN], "dash": [KEY_SPACE, KEY_SHIFT], "attack": [KEY_J, KEY_F]}
+	var keys := {"left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT], "forward": [KEY_W, KEY_UP], "back": [KEY_S, KEY_DOWN], "dash": [KEY_SPACE, KEY_SHIFT], "attack": [KEY_J, KEY_F], "walk": [KEY_CTRL]}
 	for action in keys:
 		InputMap.add_action(action)
 		for key in keys[action]:
@@ -163,7 +165,8 @@ func build_map() -> void:
 	for index in range(3):
 		build_room(ROOM_CENTERS[index], index)
 	for center_z in [-20, -60]:
-		cube(Vector3(0, -0.31, center_z), Vector3(5, 1, 16), Color("211e2c"), true)
+		var bridge := cube(Vector3(0, -0.6, center_z), Vector3(5, 1, 16), Color("211e2c"), true)
+		bridge.get_child(0).position.y = 0.29
 		for z in range(-7, 8, 5):
 			prop("Environments/Floors/SM_Env_Tiles_01", Vector3(-2.5, 0, center_z + z - 0.5))
 		for side in [-1, 1]:
@@ -172,7 +175,9 @@ func build_map() -> void:
 				brazier(Vector3(side * 2.8, 0.6, center_z + z), Color("ff783a"), 0.6)
 
 func build_room(center: Vector3, index: int) -> void:
-	cube(center + Vector3(0, -1.12, 0), Vector3(31, 2.6, 26), Color("24212a"), true)
+	var foundation := cube(center + Vector3(0, -1.4, 0), Vector3(31, 2.6, 26), Color("24212a"), true)
+	# Collision aligns with the tile tops; visible stone stays below the relief.
+	foundation.get_child(0).position.y = 0.28
 	for x in range(-15, 15, 5):
 		for z in range(-12, 13, 5):
 			var tile := "SM_Env_Tiles_01" if (x + z) % 3 else "SM_Env_Tiles_02"
@@ -259,7 +264,13 @@ func build_player() -> void:
 	player.name = "Knight"
 	player.set_script(load("res://knight.gd"))
 	player.floor_snap_length = 0.35
-	var character := character_visual("Character_Hero_Knight_Female")
+	var character: Node3D
+	if ResourceLoader.exists("res://Assets/worker.glb"):
+		character = load("res://Assets/worker.glb").instantiate()
+		strip_collision(character)
+	else:
+		character = character_visual("Character_Hero_Knight_Female")
+	character.name = "PlayerVisual"
 	player.add_child(character)
 	var collider := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
@@ -433,6 +444,8 @@ func capture() -> void:
 func smoke_test() -> void:
 	assert(enemies.size() == 9)
 	assert(player.skeleton.find_bone("RightHand") >= 0)
+	if player.animator:
+		assert(player.animator.has_animation("Idle") and player.animator.has_animation("Running"))
 	Input.action_press("right")
 	var start := player.position
 	for i in range(20):
@@ -490,6 +503,53 @@ func physics_test() -> void:
 		assert(absf(player.position.y - 0.185) < 0.1, "Unexpected vertical displacement")
 	assert(health == 5, "Traversal unexpectedly triggered a fall/respawn")
 	print("EMBER_VAULT_PHYSICS_OK")
+	get_tree().quit()
+
+func animation_test() -> void:
+	assert(player.animator != null, "Install the Mixamo worker GLB to run this check")
+	paused = true
+	for enemy in enemies:
+		enemy.queue_free()
+	enemies.clear()
+	zoom = 12
+	camera.size = zoom
+	camera.position = player.position + Vector3(23, 30, 23)
+	camera.look_at(player.position + Vector3.UP)
+	for i in range(15):
+		await get_tree().physics_frame
+	assert(player.animator.current_animation == "Idle")
+	var directory := ProjectSettings.globalize_path("res://../../generated/previews")
+	DirAccess.make_dir_recursive_absolute(directory)
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(directory.path_join("mixamo-idle.png"))
+	Input.action_press("right")
+	for i in range(20):
+		await get_tree().physics_frame
+	assert(player.animator.current_animation == "Running")
+	Input.action_press("walk")
+	for i in range(10):
+		await get_tree().physics_frame
+	assert(player.animator.current_animation == "Walking")
+	Input.action_release("walk")
+	var hip: Vector3 = player.skeleton.global_transform * player.skeleton.get_bone_global_pose(player.skeleton.find_bone("Hips")).origin
+	assert(hip.distance_to(player.position + Vector3.UP) < 1, "Animation moved mesh away from capsule")
+	Input.action_release("right")
+	for i in range(15):
+		await get_tree().physics_frame
+	var before: Transform3D = player.sword.global_transform
+	Input.action_press("attack")
+	for i in range(10):
+		await get_tree().physics_frame
+	Input.action_release("attack")
+	assert(not player.sword.global_transform.is_equal_approx(before), "Sword failed to swing")
+	assert(slash_left > 0, "Sword impact was not triggered")
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(directory.path_join("mixamo-swing.png"))
+	for i in range(30):
+		await get_tree().physics_frame
+	assert(player.attack_left == 0 and not player.pending_hit)
+	assert(player.is_on_floor())
+	print("EMBER_VAULT_ANIMATION_OK: Mixamo idle/run, in-place hips, procedural swing, impact timing, recovery")
 	get_tree().quit()
 
 func own_nodes(node: Node, owner_node: Node) -> void:
