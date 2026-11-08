@@ -1,0 +1,12 @@
+{
+  "name": "gamewright",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-assisted Godot prototype generator for solo developers",
+  "scripts": {
+    "test": "node --test",
+    "demo": "node src/cli.mjs --demo --out generated/demo"
+  },
+  "engines": { "node": ">=22" }
+}
