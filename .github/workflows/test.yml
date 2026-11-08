@@ -9,3 +9,20 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+  game:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.3
+        run: |
+          curl --fail --location --output /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.3-stable_linux.x86_64
+      - name: Import test game
+        run: /tmp/godot/Godot_v4.3-stable_linux.x86_64 --headless --path games/crystal-rush --editor --import --quit
+      - name: Verify game loop
+        run: |
+          xvfb-run -a /tmp/godot/Godot_v4.3-stable_linux.x86_64 --path games/crystal-rush --quit-after 600 -- --smoke-test > /tmp/game.log 2>&1
+          cat /tmp/game.log
+          grep -q CRYSTAL_RUSH_SMOKE_OK /tmp/game.log
+          if grep -E 'SCRIPT ERROR|Assertion failed' /tmp/game.log; then exit 1; fi

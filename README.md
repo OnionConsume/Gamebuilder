@@ -8,6 +8,12 @@ An early AI game-building tool for solo developers and small teams. The first ve
 
 ## Quick start
 
+### Play the test game
+
+Open [`games/crystal-rush/project.godot`](games/crystal-rush/project.godot) in Godot 4.3+ and press F5. **Crystal Rush** is a complete reference game with pursuing enemies, dash combat, health, twelve collectibles, extraction, pause, and replay. See its [controls and engine checks](games/crystal-rush/README.md). It is a bespoke sample; the generator currently creates the simpler arena described below.
+
+### Try the generator
+
 Requirements: Node.js 22+ and Godot 4.x (Compatibility renderer). No npm dependencies.
 
 ```sh
