@@ -5,3 +5,7 @@ generated/
 !.env.example
 .godot/
 *.log
+Models/
+models/
+games/ember-vault/Assets/
+games/ember-vault/dungeon_layout.tscn

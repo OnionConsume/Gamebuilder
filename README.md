@@ -10,6 +10,8 @@ An early AI game-building tool for solo developers and small teams. The first ve
 
 ### Play the test game
 
+**New: [Ember Vault](games/ember-vault/README.md)** is a three-chamber dungeon with a supplied knight, equipped sword, skeleton combat, lava bridges, and warm/cool lighting. Run `./Play-EmberVault.ps1` locally. Requires Godot 4.5.1+ and the separately licensed POLYGON Dungeon pack; purchased assets are kept out of GitHub.
+
 Open [`games/crystal-rush/project.godot`](games/crystal-rush/project.godot) in Godot 4.3+ and press F5. **Crystal Rush** is a complete reference game with pursuing enemies, dash combat, health, twelve collectibles, extraction, pause, and replay. See its [controls and engine checks](games/crystal-rush/README.md). It is a bespoke sample; the generator currently creates the simpler arena described below.
 
 ### Try the generator
