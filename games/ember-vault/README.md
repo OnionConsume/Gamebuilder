@@ -43,9 +43,12 @@ Then open `dungeon_layout.tscn` in the Godot editor. It contains the three rooms
 ```sh
 godot --path games/ember-vault --quit-after 600 -- --smoke-test
 godot --path games/ember-vault --quit-after 600 -- --capture
+godot --path games/ember-vault --quit-after 3000 -- --physics-test
 ```
 
 The smoke test checks asset loading, sword attachment, movement, dashing, combat, and the victory trigger. Capture mode writes room/character previews to the ignored repository `generated/previews` directory. Use a graphical renderer for screenshot capture.
+
+The physics regression check verifies stable floor contact while idle and while walking/dashing through all chambers, both bridges, and their seams. Imported characters are visual-only skeleton hierarchies; the player controller owns the single capsule collider. This avoids nested prefab physics bodies pushing the controller upward.
 
 ## Asset boundaries
 

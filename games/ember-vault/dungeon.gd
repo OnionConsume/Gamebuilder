@@ -40,6 +40,8 @@ func _ready() -> void:
 		call_deferred("smoke_test")
 	elif "--bake" in OS.get_cmdline_user_args():
 		call_deferred("bake_map")
+	elif "--physics-test" in OS.get_cmdline_user_args():
+		call_deferred("physics_test")
 
 func setup_input() -> void:
 	var keys := {"left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT], "forward": [KEY_W, KEY_UP], "back": [KEY_S, KEY_DOWN], "dash": [KEY_SPACE, KEY_SHIFT], "attack": [KEY_J, KEY_F]}
@@ -107,10 +109,25 @@ func cube(at: Vector3, size: Vector3, color: Color, solid := false, parent: Node
 
 func strip_collision(node: Node) -> void:
 	for child in node.get_children():
-		if child is CollisionObject3D:
+		if child is CollisionObject3D or child is CollisionShape3D or child is CollisionPolygon3D:
 			child.free()
 		else:
 			strip_collision(child)
+
+func character_visual(asset: String) -> Node3D:
+	# Prefabs have CharacterBody3D roots. Keep only the skeleton as a visual,
+	# otherwise a nested body collides with and lifts the player controller.
+	var source: Node3D = load(PREFABS + "Characters/" + asset + ".tscn").instantiate()
+	var visual := Node3D.new()
+	visual.name = asset
+	var skeleton: Skeleton3D = source.get_node("GeneralSkeleton")
+	own_nodes(skeleton, null)
+	skeleton.owner = null
+	source.remove_child(skeleton)
+	visual.add_child(skeleton)
+	strip_collision(visual)
+	source.free()
+	return visual
 
 func prop(asset: String, at: Vector3, turn := 0.0, size := Vector3.ONE, collision := false) -> Node3D:
 	var node: Node3D = load(PREFABS + asset + ".tscn").instantiate()
@@ -241,8 +258,8 @@ func build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Knight"
 	player.set_script(load("res://knight.gd"))
-	var character: Node3D = load(PREFABS + "Characters/Character_Hero_Knight_Female.tscn").instantiate()
-	strip_collision(character)
+	player.floor_snap_length = 0.35
+	var character := character_visual("Character_Hero_Knight_Female")
 	player.add_child(character)
 	var collider := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
@@ -268,8 +285,7 @@ func build_player() -> void:
 func spawn_guardians() -> void:
 	for room in range(3):
 		for offset in [Vector3(-5, 0.2, -2), Vector3(5, 0.2, -4), Vector3(0, 0.2, -7)]:
-			var enemy: Node3D = load(PREFABS + "Characters/Character_Skeleton_Knight.tscn").instantiate()
-			strip_collision(enemy)
+			var enemy := character_visual("Character_Skeleton_Knight")
 			var skeleton: Skeleton3D = enemy.get_node("GeneralSkeleton")
 			for bone_name in ["LeftUpperArm", "RightUpperArm"]:
 				var bone_index := skeleton.find_bone(bone_name)
@@ -440,6 +456,40 @@ func smoke_test() -> void:
 	await get_tree().physics_frame
 	assert(won)
 	print("EMBER_VAULT_SMOKE_OK: assets, sword attachment, movement, dash, combat, victory")
+	get_tree().quit()
+
+func physics_test() -> void:
+	# Remove combat interference while checking the controller's floor contact.
+	for enemy in enemies:
+		enemy.queue_free()
+	enemies.clear()
+	assert(not player.visual is CollisionObject3D, "Imported visual must not be a physics body")
+	for frame in range(120):
+		await get_tree().physics_frame
+		if frame % 30 == 0:
+			print("PHYSICS frame=", frame, " y=", player.position.y, " velocity=", player.velocity, " floor=", player.is_on_floor())
+	assert(absf(player.position.y - 0.18) < 0.1, "Idle character must settle on the floor")
+	assert(player.is_on_floor(), "Idle character lost floor contact")
+	# Walk and dash on every chamber and both bridges, including their seams.
+	for start_z in [5.0, -20.0, -40.0, -60.0, -80.0, -12.0, -27.0, -52.0, -67.0]:
+		player.position = Vector3(0, 0.4, start_z)
+		player.velocity = Vector3.ZERO
+		Input.action_press("forward")
+		Input.action_press("right")
+		for frame in range(12):
+			await get_tree().physics_frame
+		Input.action_press("dash")
+		for frame in range(16):
+			await get_tree().physics_frame
+		Input.action_release("dash")
+		Input.action_release("forward")
+		Input.action_release("right")
+		for frame in range(6):
+			await get_tree().physics_frame
+		assert(player.is_on_floor(), "Lost floor while traversing room/bridge")
+		assert(absf(player.position.y - 0.185) < 0.1, "Unexpected vertical displacement")
+	assert(health == 5, "Traversal unexpectedly triggered a fall/respawn")
+	print("EMBER_VAULT_PHYSICS_OK")
 	get_tree().quit()
 
 func own_nodes(node: Node, owner_node: Node) -> void:

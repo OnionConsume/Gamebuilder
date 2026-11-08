@@ -25,7 +25,7 @@ func _ready() -> void:
 	skeleton.add_child(hand)
 	sword = load("res://Assets/PolygonDungeon/Prefabs/Weapons/SM_Wep_Straightsword_01.tscn").instantiate()
 	for child in sword.get_children():
-		child.queue_free()
+		child.free()
 	hand.add_child(sword)
 	sword.rotation_degrees = Vector3(90, 0, 0)
 	sword.scale = Vector3.ONE * 1.35
@@ -68,6 +68,8 @@ func _physics_process(delta: float) -> void:
 	velocity.z = motion.z
 	if not is_on_floor():
 		velocity.y -= 25 * delta
+	else:
+		velocity.y = 0
 	move_and_slide()
 	visual.rotation.y = lerp_angle(visual.rotation.y, atan2(facing.x, facing.z), delta * 16)
 	pose(sin(clock * 13) if direction.length_squared() > 0 else 0)
